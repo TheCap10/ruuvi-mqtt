@@ -1,0 +1,31 @@
+# ruuvi-mqtt configuration
+# Copy this to config.yaml and edit as needed.
+
+mqtt:
+  host: 192.168.1.100     # IP or hostname of your MQTT broker
+  port: 1883
+  username: mqtt_user     # remove or leave blank if broker has no auth
+  password: mqtt_pass
+  topic_prefix: ruuvi     # state published to ruuvi/<mac>/state
+  client_id: ruuvi-mqtt
+
+scan:
+  # Minimum seconds between MQTT publishes for the same tag.
+  # Ruuvi tags broadcast ~once per second; 10s is a good balance.
+  publish_interval: 10
+
+# Home Assistant MQTT Discovery — sensors appear automatically in HA.
+ha_discovery:
+  enabled: true
+  prefix: homeassistant   # must match HA's discovery prefix (default: homeassistant)
+
+# List your Ruuvi tag MAC addresses and friendly names.
+# If you leave this list empty, ALL Ruuvi tags in range will be published.
+tags:
+  - mac: "AA:BB:CC:DD:EE:FF"
+    name: "Fridge Left"
+  - mac: "AA:BB:CC:DD:EE:00"
+    name: "Fridge Right"
+
+# Logging level: DEBUG | INFO | WARNING | ERROR
+log_level: INFO
