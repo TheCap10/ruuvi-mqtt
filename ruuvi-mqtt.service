@@ -1,0 +1,19 @@
+[Unit]
+Description=Ruuvi BLE to MQTT publisher
+After=network-online.target bluetooth.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=pi
+WorkingDirectory=/home/pi/ruuvi-mqtt
+ExecStart=/home/pi/ruuvi-mqtt/venv/bin/python ruuvi_mqtt.py --config /home/pi/ruuvi-mqtt/config.yaml
+Restart=on-failure
+RestartSec=10
+
+# Allow BLE access without root
+AmbientCapabilities=CAP_NET_RAW CAP_NET_ADMIN
+CapabilityBoundingSet=CAP_NET_RAW CAP_NET_ADMIN
+
+[Install]
+WantedBy=multi-user.target
