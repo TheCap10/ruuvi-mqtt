@@ -1,0 +1,330 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Ruuvi Dashboard</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: system-ui, sans-serif;
+      background: #0f172a;
+      color: #e2e8f0;
+      min-height: 100vh;
+      padding: 2rem 1rem;
+    }
+
+    header {
+      text-align: center;
+      margin-bottom: 2rem;
+    }
+    header h1 { font-size: 1.8rem; font-weight: 700; color: #f8fafc; }
+    header p  { color: #94a3b8; margin-top: .25rem; font-size: .9rem; }
+
+    #status {
+      display: inline-block;
+      padding: .25rem .75rem;
+      border-radius: 9999px;
+      font-size: .8rem;
+      font-weight: 600;
+      margin-top: .5rem;
+    }
+    .status-connecting { background: #78350f; color: #fde68a; }
+    .status-connected  { background: #14532d; color: #86efac; }
+    .status-error      { background: #7f1d1d; color: #fca5a5; }
+
+    #cards {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+      gap: 1.5rem;
+      max-width: 1100px;
+      margin: 0 auto;
+    }
+
+    .card {
+      background: #1e293b;
+      border: 1px solid #334155;
+      border-radius: 1rem;
+      padding: 1.5rem;
+    }
+    .card-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 1.25rem;
+    }
+    .card-header h2 { font-size: 1.1rem; font-weight: 600; }
+    .card-mac { font-size: .7rem; color: #64748b; font-family: monospace; }
+
+    .metrics {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: .75rem;
+    }
+    .metric {
+      background: #0f172a;
+      border-radius: .5rem;
+      padding: .75rem 1rem;
+    }
+    .metric-label {
+      font-size: .7rem;
+      color: #64748b;
+      text-transform: uppercase;
+      letter-spacing: .05em;
+      margin-bottom: .2rem;
+    }
+    .metric-value {
+      font-size: 1.4rem;
+      font-weight: 700;
+      color: #f8fafc;
+      line-height: 1;
+    }
+    .metric-unit {
+      font-size: .75rem;
+      color: #94a3b8;
+      margin-left: .15rem;
+    }
+
+    /* Colour coding for temperature */
+    .temp-cold  { color: #7dd3fc; }
+    .temp-ok    { color: #86efac; }
+    .temp-warm  { color: #fde68a; }
+    .temp-hot   { color: #f87171; }
+
+    .card-footer {
+      margin-top: 1rem;
+      font-size: .75rem;
+      color: #64748b;
+      text-align: right;
+    }
+
+    #empty {
+      text-align: center;
+      color: #475569;
+      margin-top: 3rem;
+      font-size: 1rem;
+    }
+
+    /* Connection settings form */
+    #settings {
+      background: #1e293b;
+      border: 1px solid #334155;
+      border-radius: 1rem;
+      padding: 1.25rem 1.5rem;
+      max-width: 520px;
+      margin: 0 auto 2rem;
+    }
+    #settings h3 { font-size: .9rem; color: #94a3b8; margin-bottom: .75rem; }
+    .field-row { display: flex; gap: .5rem; flex-wrap: wrap; align-items: flex-end; }
+    .field { display: flex; flex-direction: column; gap: .25rem; flex: 1; min-width: 120px; }
+    .field label { font-size: .75rem; color: #64748b; }
+    .field input {
+      background: #0f172a;
+      border: 1px solid #334155;
+      border-radius: .4rem;
+      padding: .4rem .6rem;
+      color: #e2e8f0;
+      font-size: .9rem;
+      width: 100%;
+    }
+    .field input:focus { outline: 2px solid #3b82f6; border-color: transparent; }
+    button {
+      background: #3b82f6;
+      color: #fff;
+      border: none;
+      border-radius: .4rem;
+      padding: .45rem 1rem;
+      cursor: pointer;
+      font-size: .9rem;
+      font-weight: 600;
+      white-space: nowrap;
+    }
+    button:hover { background: #2563eb; }
+  </style>
+</head>
+<body>
+
+<header>
+  <h1>Ruuvi Dashboard</h1>
+  <p>Live readings via MQTT over WebSockets</p>
+  <span id="status" class="status-connecting">Connecting…</span>
+</header>
+
+<!-- Connection settings -->
+<div id="settings">
+  <h3>Broker connection</h3>
+  <div class="field-row">
+    <div class="field">
+      <label for="brokerHost">Host</label>
+      <input id="brokerHost" type="text" value="192.168.1.100" placeholder="broker IP">
+    </div>
+    <div class="field" style="max-width:90px">
+      <label for="brokerPort">WS Port</label>
+      <input id="brokerPort" type="number" value="9001" placeholder="9001">
+    </div>
+    <div class="field" style="max-width:110px">
+      <label for="brokerUser">Username</label>
+      <input id="brokerUser" type="text" placeholder="optional">
+    </div>
+    <div class="field" style="max-width:110px">
+      <label for="brokerPass">Password</label>
+      <input id="brokerPass" type="password" placeholder="optional">
+    </div>
+    <div class="field" style="max-width:80px">
+      <label for="topicPrefix">Prefix</label>
+      <input id="topicPrefix" type="text" value="ruuvi">
+    </div>
+    <button onclick="connect()">Connect</button>
+  </div>
+</div>
+
+<div id="cards"></div>
+<div id="empty">Waiting for data…</div>
+
+<!-- mqtt.js from CDN -->
+<script src="https://unpkg.com/mqtt@5/dist/mqtt.min.js"></script>
+<script>
+  const statusEl = document.getElementById("status");
+  const cardsEl  = document.getElementById("cards");
+  const emptyEl  = document.getElementById("empty");
+
+  const tags = {};   // mac → latest data
+  let mqttClient = null;
+
+  // Friendly names loaded from HA discovery retain payloads (optional enhancement).
+  // Falls back to shortened MAC.
+  const tagNames = {};
+
+  function setStatus(text, cls) {
+    statusEl.textContent = text;
+    statusEl.className = `status-${cls}`;
+  }
+
+  function tempClass(c) {
+    if (c < 2)  return "temp-cold";
+    if (c < 10) return "temp-ok";
+    if (c < 25) return "temp-warm";
+    return "temp-hot";
+  }
+
+  function fmt(val, digits = 1) {
+    return val == null ? "—" : Number(val).toFixed(digits);
+  }
+
+  function timeAgo(ts) {
+    const s = Math.round(Date.now() / 1000 - ts);
+    if (s < 5)  return "just now";
+    if (s < 60) return `${s}s ago`;
+    return `${Math.round(s / 60)}m ago`;
+  }
+
+  function renderCards() {
+    const macs = Object.keys(tags);
+    emptyEl.style.display = macs.length ? "none" : "block";
+    cardsEl.innerHTML = macs.map(mac => {
+      const d    = tags[mac];
+      const name = tagNames[mac] || `RuuviTag ${mac.slice(-4).toUpperCase()}`;
+      const tc   = tempClass(d.temperature_c);
+      return `
+        <div class="card">
+          <div class="card-header">
+            <h2>${name}</h2>
+            <span class="card-mac">${mac.match(/.{2}/g).join(":").toUpperCase()}</span>
+          </div>
+          <div class="metrics">
+            <div class="metric">
+              <div class="metric-label">Temperature</div>
+              <div class="metric-value ${tc}">${fmt(d.temperature_c, 2)}<span class="metric-unit">°C</span></div>
+            </div>
+            <div class="metric">
+              <div class="metric-label">Humidity</div>
+              <div class="metric-value">${fmt(d.humidity_rh, 1)}<span class="metric-unit">%</span></div>
+            </div>
+            <div class="metric">
+              <div class="metric-label">Pressure</div>
+              <div class="metric-value">${fmt(d.pressure_hpa, 1)}<span class="metric-unit">hPa</span></div>
+            </div>
+            <div class="metric">
+              <div class="metric-label">Battery</div>
+              <div class="metric-value">${fmt(d.battery_mv, 0)}<span class="metric-unit">mV</span></div>
+            </div>
+            <div class="metric">
+              <div class="metric-label">Signal</div>
+              <div class="metric-value">${d.rssi ?? "—"}<span class="metric-unit">dBm</span></div>
+            </div>
+            <div class="metric">
+              <div class="metric-label">Movements</div>
+              <div class="metric-value">${d.movement_counter ?? "—"}</div>
+            </div>
+          </div>
+          <div class="card-footer">Updated ${timeAgo(d.timestamp)}</div>
+        </div>`;
+    }).join("");
+  }
+
+  // Refresh timestamps every 5 s without a full re-render
+  setInterval(() => {
+    document.querySelectorAll(".card-footer").forEach((el, i) => {
+      const mac = Object.keys(tags)[i];
+      if (mac) el.textContent = `Updated ${timeAgo(tags[mac].timestamp)}`;
+    });
+  }, 5000);
+
+  function connect() {
+    if (mqttClient) { mqttClient.end(true); }
+
+    const host   = document.getElementById("brokerHost").value.trim();
+    const port   = document.getElementById("brokerPort").value.trim() || "9001";
+    const user   = document.getElementById("brokerUser").value.trim();
+    const pass   = document.getElementById("brokerPass").value;
+    const prefix = document.getElementById("topicPrefix").value.trim() || "ruuvi";
+
+    const url = `ws://${host}:${port}/mqtt`;
+    setStatus(`Connecting to ${host}:${port}…`, "connecting");
+
+    const opts = { clientId: `ruuvi-dash-${Math.random().toString(16).slice(2)}` };
+    if (user) { opts.username = user; opts.password = pass; }
+
+    mqttClient = mqtt.connect(url, opts);
+
+    mqttClient.on("connect", () => {
+      setStatus(`Connected to ${host}:${port}`, "connected");
+      mqttClient.subscribe(`${prefix}/+/state`);
+      // Also grab HA discovery retain so we can resolve friendly names
+      mqttClient.subscribe("homeassistant/sensor/+/+/config");
+    });
+
+    mqttClient.on("error",   e  => setStatus(`Error: ${e.message}`, "error"));
+    mqttClient.on("offline", () => setStatus("Disconnected — retrying…", "connecting"));
+
+    mqttClient.on("message", (topic, payload) => {
+      try {
+        const data = JSON.parse(payload.toString());
+
+        // State message: ruuvi/<mac>/state
+        const stateMatch = topic.match(new RegExp(`^${prefix}/([^/]+)/state$`));
+        if (stateMatch) {
+          tags[stateMatch[1]] = data;
+          renderCards();
+          return;
+        }
+
+        // HA discovery: homeassistant/sensor/<mac>_<field>/config
+        // Use the device name field to populate tagNames
+        if (topic.startsWith("homeassistant/sensor/") && data.device?.name) {
+          const parts = topic.split("/");
+          // object_id is like "aabbccddeeff_temperature_c" — extract mac prefix
+          const objId = parts[3] || "";
+          const mac   = objId.slice(0, 12);   // first 12 hex chars = mac
+          if (mac && !tagNames[mac]) tagNames[mac] = data.device.name;
+        }
+      } catch (_) { /* ignore malformed */ }
+    });
+  }
+
+  // Auto-connect on load
+  connect();
+</script>
+</body>
+</html>

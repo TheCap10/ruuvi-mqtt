@@ -88,6 +88,46 @@ State payload example:
 }
 ```
 
+## Subscribing from other apps / bots
+
+Any MQTT client can subscribe to `ruuvi/+/state` and receive live JSON updates.
+
+**Python example** (see [`subscriber_example.py`](subscriber_example.py)):
+
+```bash
+python subscriber_example.py   # reads broker settings from config.yaml
+```
+
+The file shows how to hook into the data stream — add threshold alerts,
+post to a Discord/Telegram bot, write to SQLite or InfluxDB, etc.
+
+## Web dashboard
+
+[`dashboard.html`](dashboard.html) is a self-contained browser page that
+connects directly to the MQTT broker via **WebSockets** and shows live cards
+for each tag — no server needed, just open the file in a browser.
+
+### Enable WebSockets on Mosquitto
+
+Add a WebSocket listener to your broker config:
+
+```
+# /etc/mosquitto/conf.d/websockets.conf
+listener 9001
+protocol websockets
+```
+
+```bash
+sudo systemctl restart mosquitto
+```
+
+Then open `dashboard.html` in any browser, enter your broker IP, and click
+**Connect**. The dashboard auto-discovers tag names from the HA discovery
+retain messages.
+
+> If your broker requires authentication, enter the same credentials you use
+> for the main MQTT connection — the WebSocket listener honours them.
+
 ## Home Assistant
 
 If `ha_discovery.enabled` is `true`, sensors are created automatically under
